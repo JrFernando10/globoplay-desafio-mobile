@@ -11,8 +11,6 @@ class FavoriteManager {
     static let shared = FavoriteManager()
     private let favoritesKey = "favoriteMovies"
 
-    private init() {}
-
     func saveFavoriteMovies(_ movies: [Movie]) {
         if let encodedData = try? JSONEncoder().encode(movies) {
             UserDefaults.standard.set(encodedData, forKey: favoritesKey)

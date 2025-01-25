@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import UIKit
 
 class MovieListViewModel {
     private var movies: [Movie] = []
@@ -26,11 +27,9 @@ class MovieListViewModel {
                 self?.movies.append(contentsOf: response.results)
                 self?.filteredMovies = self?.movies ?? []
                 self?.totalPages = response.total_pages
-                
                 DispatchQueue.main.async {
                     self?.onMoviesUpdated?()
                 }
-                
             case .failure(let error):
                 print("Error fetching movies: \(error.localizedDescription)")
             }
@@ -47,8 +46,23 @@ class MovieListViewModel {
     func filterMovies(searchText: String) {
         isSearchActive = !searchText.isEmpty
         filteredMovies = searchText.isEmpty ? movies : movies.filter { $0.title.lowercased().contains(searchText.lowercased()) }
-        DispatchQueue.main.async {
-            self.onMoviesUpdated?()
+        onMoviesUpdated?()
+    }
+
+    func loadImage(for movie: Movie, completion: @escaping (UIImage?) -> Void) {
+        if let posterPath = movie.poster_path, let url = URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)") {
+            URLSession.shared.dataTask(with: url) { data, response, error in
+                guard let data = data, error == nil else {
+                    completion(nil)
+                    return
+                }
+                let image = UIImage(data: data)
+                DispatchQueue.main.async {
+                    completion(image)
+                }
+            }.resume()
+        } else {
+            completion(nil)
         }
     }
 }

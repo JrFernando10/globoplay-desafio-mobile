@@ -7,20 +7,33 @@
 
 import UIKit
 
+protocol MyListControllerDelegate: AnyObject {
+    func didUpdateFavorites()
+}
+
 class MyListController: UIViewController {
     var favoriteMovies: [Movie] = [] {
         didSet {
             FavoriteManager.shared.saveFavoriteMovies(favoriteMovies)
-            tableView.reloadData()
+            delegate?.didUpdateFavorites()
+            updateUI()
         }
     }
 
+    weak var delegate: MyListControllerDelegate?
     private let tableView = UITableView()
+    private let emptyStateLabel = UILabel()
+    private let viewModel = MovieListViewModel()
 
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
         loadFavoriteMovies()
+    }
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        updateUI()
     }
 
     private func setupUI() {
@@ -30,6 +43,7 @@ class MyListController: UIViewController {
         tableView.delegate = self
         tableView.dataSource = self
         tableView.register(MovieCell.self, forCellReuseIdentifier: MovieCell.identifier)
+        tableView.tableFooterView = UIView()
         view.addSubview(tableView)
         tableView.translatesAutoresizingMaskIntoConstraints = false
         NSLayoutConstraint.activate([
@@ -38,20 +52,37 @@ class MyListController: UIViewController {
             tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
+
+        emptyStateLabel.text = "Sua lista está vazia"
+        emptyStateLabel.textColor = .gray
+        emptyStateLabel.textAlignment = .center
+        emptyStateLabel.isHidden = true
+        view.addSubview(emptyStateLabel)
+        emptyStateLabel.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            emptyStateLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            emptyStateLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor)
+        ])
     }
 
-    private func loadFavoriteMovies() {
+    private func updateUI() {
+        emptyStateLabel.isHidden = !favoriteMovies.isEmpty
+        title = favoriteMovies.isEmpty ? "Lista Vazia" : "Minha Lista"
+        tableView.reloadData()
+    }
+
+    func loadFavoriteMovies() {
         favoriteMovies = FavoriteManager.shared.loadFavoriteMovies()
     }
 
     func addFavoriteMovie(_ movie: Movie) {
-        if !favoriteMovies.contains(where: { $0.id == movie.id }) {
-            favoriteMovies.append(movie)
-        }
+        guard !favoriteMovies.contains(where: { $0.id == movie.id }) else { return }
+        favoriteMovies.append(movie)
     }
-
+    
     func removeFavoriteMovie(_ movie: Movie) {
-        favoriteMovies.removeAll { $0.id == movie.id }
+        guard let index = favoriteMovies.firstIndex(where: { $0.id == movie.id }) else { return }
+        favoriteMovies.remove(at: index)
     }
 }
 
@@ -64,13 +95,28 @@ extension MyListController: UITableViewDataSource, UITableViewDelegate {
         guard let cell = tableView.dequeueReusableCell(withIdentifier: MovieCell.identifier, for: indexPath) as? MovieCell else {
             return UITableViewCell()
         }
-        
         let movie = favoriteMovies[indexPath.row]
-        cell.configure(with: movie, isFavorite: true)
+        
+        viewModel.loadImage(for: movie) { image in
+            DispatchQueue.main.async {
+                cell.configure(with: movie, isFavorite: true, image: image)
+            }
+        }
+        
         cell.onFavoriteTapped = { [weak self] in
             self?.removeFavoriteMovie(movie)
         }
         
         return cell
+    }
+
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+        return 120
+    }
+    
+    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        let movie = viewModel.filteredMovies[indexPath.row]
+        let detailController = MovieDetailController(movie: movie)
+        present(detailController, animated: true, completion: nil)
     }
 }
