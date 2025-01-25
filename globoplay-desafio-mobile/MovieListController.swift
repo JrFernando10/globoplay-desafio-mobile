@@ -7,24 +7,28 @@
 
 import UIKit
 
-class MovieListController: UIViewController, MyListControllerDelegate, UISearchResultsUpdating {
+private enum Constants {
+    static let itemHeight: CGFloat = 150
+    static let itemSpacing: CGFloat = 10
+    static let sectionInsets = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
+    static let itemsPerRow: CGFloat = 2
+}
+
+final class MovieListController: UIViewController, MyListControllerDelegate, UISearchResultsUpdating, MovieDetailControllerDelegate {
     private let viewModel = MovieListViewModel()
     private let searchController = UISearchController(searchResultsController: nil)
     private var myListController = MyListController()
     private var favoriteMovieIds: Set<Int> = []
 
     private lazy var collectionView: UICollectionView = {
-        let layout = UICollectionViewFlowLayout()
-        layout.scrollDirection = .vertical
-        layout.itemSize = CGSize(width: view.frame.width, height: 150)
-        layout.minimumLineSpacing = 10
-
+        let layout = createCollectionViewLayout()
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.delegate = self
         collectionView.dataSource = self
-        collectionView.register(MovieCell.self, forCellWithReuseIdentifier: MovieCell.identifier)
+        collectionView.register(MovieCell.self, forCellWithReuseIdentifier: MovieCell.reuseIdentifier)
         collectionView.backgroundColor = .white
         collectionView.translatesAutoresizingMaskIntoConstraints = false
+        collectionView.alwaysBounceVertical = true
         return collectionView
     }()
 
@@ -34,6 +38,11 @@ class MovieListController: UIViewController, MyListControllerDelegate, UISearchR
         setupViewModel()
         setupSearchController()
         myListController.loadFavoriteMovies()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        didUpdateFavorites()
     }
 
     private func setupUI() {
@@ -52,6 +61,19 @@ class MovieListController: UIViewController, MyListControllerDelegate, UISearchR
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Minha Lista", style: .plain, target: self, action: #selector(openMyList))
     }
 
+    private func createCollectionViewLayout() -> UICollectionViewFlowLayout {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .vertical
+        let paddingSpace = Constants.sectionInsets.left * (Constants.itemsPerRow + 1)
+        let availableWidth = view.frame.width - paddingSpace
+        let widthPerItem = availableWidth / Constants.itemsPerRow
+        layout.itemSize = CGSize(width: widthPerItem, height: Constants.itemHeight)
+        layout.minimumLineSpacing = Constants.itemSpacing
+        layout.minimumInteritemSpacing = Constants.itemSpacing
+        layout.sectionInset = Constants.sectionInsets
+        return layout
+    }
+
     private func setupSearchController() {
         searchController.searchResultsUpdater = self
         searchController.obscuresBackgroundDuringPresentation = false
@@ -63,6 +85,7 @@ class MovieListController: UIViewController, MyListControllerDelegate, UISearchR
     }
 
     @objc private func openMyList() {
+        myListController.loadFavoriteMovies()
         navigationController?.pushViewController(myListController, animated: true)
     }
 
@@ -90,7 +113,7 @@ extension MovieListController: UICollectionViewDataSource, UICollectionViewDeleg
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MovieCell.identifier, for: indexPath) as? MovieCell else {
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MovieCell.reuseIdentifier, for: indexPath) as? MovieCell else {
             return UICollectionViewCell()
         }
         
@@ -107,6 +130,7 @@ extension MovieListController: UICollectionViewDataSource, UICollectionViewDeleg
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let movie = viewModel.filteredMovies[indexPath.row]
         let detailController = MovieDetailController(movie: movie)
+        detailController.delegate = self
         detailController.modalPresentationStyle = .formSheet
         present(detailController, animated: true)
     }

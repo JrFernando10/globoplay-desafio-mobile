@@ -5,7 +5,6 @@
 //  Created by Fernando on 24/01/25.
 //
 
-import Foundation
 import UIKit
 
 protocol MyListControllerDelegate: AnyObject {
@@ -13,101 +12,147 @@ protocol MyListControllerDelegate: AnyObject {
 }
 
 class MyListController: UIViewController {
+    private let viewModel = MovieListViewModel()
+    weak var delegate: MyListControllerDelegate?
+    private let tableView = UITableView()
+    private let emptyStateLabel = UILabel()
+    
     private(set) var favoriteMovies: [Movie] = [] {
         didSet {
             updateUI()
         }
     }
 
-    private lazy var collectionView: UICollectionView = {
-        let layout = UICollectionViewFlowLayout()
-        layout.scrollDirection = .vertical
-        layout.itemSize = CGSize(width: view.frame.width, height: 150)
-        layout.minimumLineSpacing = 10
-
-        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
-        collectionView.delegate = self
-        collectionView.dataSource = self
-        collectionView.register(UICollectionViewCell.self, forCellWithReuseIdentifier: "cell")
-        collectionView.backgroundColor = .white
-        collectionView.translatesAutoresizingMaskIntoConstraints = false
-        return collectionView
-    }()
-
-    private let emptyStateLabel: UILabel = {
-        let label = UILabel()
-        label.text = "Nenhum filme favoritado"
-        label.textAlignment = .center
-        label.textColor = .gray
-        label.font = UIFont.systemFont(ofSize: 18, weight: .medium)
-        label.translatesAutoresizingMaskIntoConstraints = false
-        return label
-    }()
-
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        loadFavoriteMovies()
+        NotificationCenter.default.addObserver(self, selector: #selector(updateFavorites), name: .favoritesUpdated, object: nil)
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
         loadFavoriteMovies()
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        loadFavoriteMovies()
+        updateUI()
     }
-
+    
+    @objc private func updateFavorites() {
+        favoriteMovies = FavoriteManager.shared.loadFavoriteMovies()
+        DispatchQueue.main.async {
+            self.updateUI()
+        }
+    }
+    
     private func setupUI() {
         view.backgroundColor = .white
+        title = "Minha Lista"
+
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.register(MovieFavoriteCell.self, forCellReuseIdentifier: MovieFavoriteCell.identifier)
+        tableView.tableFooterView = UIView()
+        view.addSubview(tableView)
+        tableView.translatesAutoresizingMaskIntoConstraints = false
+
+        NSLayoutConstraint.activate([
+            tableView.topAnchor.constraint(equalTo: view.topAnchor),
+            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+        ])
+
+        emptyStateLabel.text = "Sua lista está vazia"
+        emptyStateLabel.textColor = .gray
+        emptyStateLabel.textAlignment = .center
+        emptyStateLabel.isHidden = true
         view.addSubview(emptyStateLabel)
-        view.addSubview(collectionView)
+        emptyStateLabel.translatesAutoresizingMaskIntoConstraints = false
 
         NSLayoutConstraint.activate([
             emptyStateLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            emptyStateLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor),
-            collectionView.topAnchor.constraint(equalTo: view.topAnchor),
-            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+            emptyStateLabel.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
-
-        updateUI()
     }
-
+    
     private func updateUI() {
         emptyStateLabel.isHidden = !favoriteMovies.isEmpty
-        collectionView.isHidden = favoriteMovies.isEmpty
-        collectionView.reloadData()
+        title = favoriteMovies.isEmpty ? "Lista Vazia" : "Minha Lista"
+        tableView.reloadData()
     }
 
     func loadFavoriteMovies() {
         favoriteMovies = FavoriteManager.shared.loadFavoriteMovies()
+        DispatchQueue.main.async {
+            self.updateUI()
+        }
+    }
+    
+    func addFavoriteMovie(_ movie: Movie) {
+        guard !favoriteMovies.contains(where: { $0.id == movie.id }) else { return }
+        favoriteMovies.append(movie)
+        updateUI()
+        delegate?.didUpdateFavorites()
+    }
+
+    func removeFavoriteMovie(_ movie: Movie) {
+        guard let index = favoriteMovies.firstIndex(where: { $0.id == movie.id }) else { return }
+        favoriteMovies.remove(at: index)
+        updateUI()
+        delegate?.didUpdateFavorites()
     }
 }
 
-extension MyListController: UICollectionViewDataSource, UICollectionViewDelegate {
-    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+extension MyListController: UITableViewDataSource, UITableViewDelegate {
+    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         return favoriteMovies.count
     }
 
-    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
-        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: "cell", for: indexPath)
-        cell.backgroundColor = .lightGray
-
-        cell.contentView.subviews.forEach { $0.removeFromSuperview() }
-
+    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: MovieFavoriteCell.identifier, for: indexPath) as? MovieFavoriteCell else {
+            return UITableViewCell()
+        }
+        
         let movie = favoriteMovies[indexPath.row]
-        let label = UILabel()
-        label.text = movie.title
-        label.textAlignment = .center
-        label.textColor = .black
-        label.font = UIFont.systemFont(ofSize: 16, weight: .bold)
-        label.translatesAutoresizingMaskIntoConstraints = false
-        cell.contentView.addSubview(label)
-
-        NSLayoutConstraint.activate([
-            label.centerXAnchor.constraint(equalTo: cell.contentView.centerXAnchor),
-            label.centerYAnchor.constraint(equalTo: cell.contentView.centerYAnchor)
-        ])
-
+        
+        viewModel.loadImage(for: movie) { image in
+            DispatchQueue.main.async {
+                cell.configure(with: movie, isFavorite: true, image: image)
+            }
+        }
+        
+        cell.onFavoriteTapped = { [weak self] in
+            self?.removeFavoriteMovie(movie)
+        }
+        
         return cell
     }
+       
+    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
+         return 120
+     }
+     
+     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+         let movie = favoriteMovies[indexPath.row]
+         let detailController = MovieDetailController(movie: movie)
+         detailController.delegate = self
+         detailController.modalPresentationStyle = .formSheet
+         present(detailController, animated: true, completion: nil)
+     }
+}
+
+extension MyListController: MovieDetailControllerDelegate {
+    func didUpdateFavorites() {
+        DispatchQueue.main.async {
+            self.loadFavoriteMovies()
+            self.updateUI()
+        }
+    }
+}
+
+extension Notification.Name {
+    static let favoritesUpdated = Notification.Name("favoritesUpdated")
 }

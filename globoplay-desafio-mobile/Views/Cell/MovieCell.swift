@@ -8,7 +8,7 @@
 import UIKit
 
 class MovieCell: UICollectionViewCell {
-    static let identifier = "MovieCell"
+    static let reuseIdentifier = "MovieCell"
 
     private(set) lazy var posterImageView: UIImageView = {
         let imageView = UIImageView()
