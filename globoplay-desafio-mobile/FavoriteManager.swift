@@ -9,19 +9,21 @@ import Foundation
 
 class FavoriteManager {
     static let shared = FavoriteManager()
-    private let favoritesKey = "favoriteMovies"
+    private var favoriteMovies: [Movie] = []
 
-    func saveFavoriteMovies(_ movies: [Movie]) {
-        if let encodedData = try? JSONEncoder().encode(movies) {
-            UserDefaults.standard.set(encodedData, forKey: favoritesKey)
+    private init() {}
+
+    func addFavoriteMovie(_ movie: Movie) {
+        if !favoriteMovies.contains(where: { $0.id == movie.id }) {
+            favoriteMovies.append(movie)
         }
     }
 
+    func removeFavoriteMovie(_ movie: Movie) {
+        favoriteMovies.removeAll { $0.id == movie.id }
+    }
+
     func loadFavoriteMovies() -> [Movie] {
-        if let savedData = UserDefaults.standard.data(forKey: favoritesKey),
-           let decodedMovies = try? JSONDecoder().decode([Movie].self, from: savedData) {
-            return decodedMovies
-        }
-        return []
+        return favoriteMovies
     }
 }

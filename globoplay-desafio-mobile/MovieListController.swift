@@ -9,10 +9,24 @@ import UIKit
 
 class MovieListController: UIViewController, MyListControllerDelegate, UISearchResultsUpdating {
     private let viewModel = MovieListViewModel()
-    private let tableView = UITableView()
     private let searchController = UISearchController(searchResultsController: nil)
     private var myListController = MyListController()
     private var favoriteMovieIds: Set<Int> = []
+
+    private lazy var collectionView: UICollectionView = {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .vertical
+        layout.itemSize = CGSize(width: view.frame.width, height: 150)
+        layout.minimumLineSpacing = 10
+
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.delegate = self
+        collectionView.dataSource = self
+        collectionView.register(MovieCell.self, forCellWithReuseIdentifier: MovieCell.identifier)
+        collectionView.backgroundColor = .white
+        collectionView.translatesAutoresizingMaskIntoConstraints = false
+        return collectionView
+    }()
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -20,23 +34,19 @@ class MovieListController: UIViewController, MyListControllerDelegate, UISearchR
         setupViewModel()
         setupSearchController()
         myListController.loadFavoriteMovies()
-        myListController.delegate = self
     }
 
     private func setupUI() {
         view.backgroundColor = .white
         title = "Filmes"
 
-        tableView.delegate = self
-        tableView.dataSource = self
-        tableView.register(MovieCell.self, forCellReuseIdentifier: MovieCell.identifier)
-        view.addSubview(tableView)
-        tableView.translatesAutoresizingMaskIntoConstraints = false
+        view.addSubview(collectionView)
+
         NSLayoutConstraint.activate([
-            tableView.topAnchor.constraint(equalTo: view.topAnchor),
-            tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-            tableView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+            collectionView.topAnchor.constraint(equalTo: view.topAnchor),
+            collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
         ])
 
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Minha Lista", style: .plain, target: self, action: #selector(openMyList))
@@ -58,24 +68,14 @@ class MovieListController: UIViewController, MyListControllerDelegate, UISearchR
 
     private func setupViewModel() {
         viewModel.onMoviesUpdated = { [weak self] in
-            DispatchQueue.main.async {
-                self?.tableView.reloadData()
-            }
+            self?.collectionView.reloadData()
         }
-        
-        DispatchQueue.global(qos: .userInitiated).async {
-            self.viewModel.fetchMovies()
-        }
+        viewModel.fetchMovies()
     }
 
     func didUpdateFavorites() {
         favoriteMovieIds = Set(myListController.favoriteMovies.map { $0.id })
-        
-        DispatchQueue.main.async {
-            if let indexPaths = self.tableView.indexPathsForVisibleRows {
-                self.tableView.reloadRows(at: indexPaths, with: .none)
-            }
-        }
+        collectionView.reloadData()
     }
 
     func updateSearchResults(for searchController: UISearchController) {
@@ -84,52 +84,30 @@ class MovieListController: UIViewController, MyListControllerDelegate, UISearchR
     }
 }
 
-extension MovieListController: UITableViewDataSource {
-    func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
+extension MovieListController: UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return viewModel.filteredMovies.count
     }
 
-    func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        guard let cell = tableView.dequeueReusableCell(withIdentifier: MovieCell.identifier, for: indexPath) as? MovieCell else {
-            return UITableViewCell()
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        guard let cell = collectionView.dequeueReusableCell(withReuseIdentifier: MovieCell.identifier, for: indexPath) as? MovieCell else {
+            return UICollectionViewCell()
         }
-        let movie = viewModel.filteredMovies[indexPath.row]
-        let isFavorite = favoriteMovieIds.contains(movie.id)
         
+        let movie = viewModel.filteredMovies[indexPath.row]
         viewModel.loadImage(for: movie) { image in
             DispatchQueue.main.async {
-                cell.configure(with: movie, isFavorite: isFavorite, image: image)
+                cell.configure(with: image ?? UIImage(named: "placeholder"))
             }
         }
-        
-        cell.onFavoriteTapped = { [weak self] in
-            if isFavorite {
-                self?.myListController.removeFavoriteMovie(movie)
-            } else {
-                self?.myListController.addFavoriteMovie(movie)
-            }
-        }
-        
+
         return cell
     }
-}
 
-extension MovieListController: UITableViewDelegate {
-    func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        return 120
-    }
-    
-    func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let movie = viewModel.filteredMovies[indexPath.row]
         let detailController = MovieDetailController(movie: movie)
-        present(detailController, animated: true, completion: nil)
-    }
-
-    func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
-        if indexPath.row == viewModel.filteredMovies.count - 1 {
-            DispatchQueue.global(qos: .userInitiated).async {
-                self.viewModel.loadNextPage()
-            }
-        }
+        detailController.modalPresentationStyle = .formSheet
+        present(detailController, animated: true)
     }
 }
