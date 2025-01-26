@@ -36,6 +36,14 @@ class MovieListViewModel {
         }
     }
 
+    func refreshMovies(completion: @escaping () -> Void) {
+        currentPage = 1
+        movies.removeAll()
+        filteredMovies.removeAll()
+        fetchMovies()
+        completion()
+    }
+
     func loadNextPage() {
         if currentPage < totalPages && !isSearchActive {
             currentPage += 1

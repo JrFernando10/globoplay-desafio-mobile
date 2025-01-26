@@ -14,11 +14,14 @@ private enum Constants {
     static let itemsPerRow: CGFloat = 2
 }
 
+import UIKit
+
 final class MovieListController: UIViewController, MyListControllerDelegate, UISearchResultsUpdating, MovieDetailControllerDelegate {
     private let viewModel = MovieListViewModel()
     private let searchController = UISearchController(searchResultsController: nil)
     private var myListController = MyListController()
     private var favoriteMovieIds: Set<Int> = []
+    private let refreshControl = UIRefreshControl()
 
     private lazy var collectionView: UICollectionView = {
         let layout = createCollectionViewLayout()
@@ -37,6 +40,7 @@ final class MovieListController: UIViewController, MyListControllerDelegate, UIS
         setupUI()
         setupViewModel()
         setupSearchController()
+        setupRefreshControl()
         myListController.loadFavoriteMovies()
     }
     
@@ -59,6 +63,17 @@ final class MovieListController: UIViewController, MyListControllerDelegate, UIS
         ])
 
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Minha Lista", style: .plain, target: self, action: #selector(openMyList))
+    }
+
+    private func setupRefreshControl() {
+        refreshControl.addTarget(self, action: #selector(refreshMovies), for: .valueChanged)
+        collectionView.refreshControl = refreshControl
+    }
+
+    @objc private func refreshMovies() {
+        viewModel.refreshMovies { [weak self] in
+            self?.refreshControl.endRefreshing()
+        }
     }
 
     private func createCollectionViewLayout() -> UICollectionViewFlowLayout {
