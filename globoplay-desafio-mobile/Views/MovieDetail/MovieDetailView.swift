@@ -11,19 +11,19 @@ class MovieDetailView: UIView {
     private let movie: Movie
     private var isFavorite: Bool
 
-    lazy var scrollView: UIScrollView = {
+    private(set) lazy var scrollView: UIScrollView = {
         let scrollView = UIScrollView()
         scrollView.translatesAutoresizingMaskIntoConstraints = false
         return scrollView
     }()
 
-    lazy var contentView: UIView = {
+    private(set) lazy var contentView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
         return view
     }()
 
-    lazy var posterImageView: UIImageView = {
+    private(set) lazy var posterImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
@@ -31,7 +31,7 @@ class MovieDetailView: UIView {
         return imageView
     }()
 
-    lazy var titleLabel: UILabel = {
+    private(set) lazy var titleLabel: UILabel = {
         let label = UILabel()
         label.text = movie.title
         label.font = UIFont.boldSystemFont(ofSize: 16)
@@ -41,7 +41,7 @@ class MovieDetailView: UIView {
         return label
     }()
 
-    lazy var overviewLabel: UILabel = {
+    private(set) lazy var overviewLabel: UILabel = {
         let label = UILabel()
         label.text = movie.overview
         label.numberOfLines = 0
@@ -52,7 +52,7 @@ class MovieDetailView: UIView {
         return label
     }()
 
-    lazy var detailsLabel: UILabel = {
+    private(set) lazy var detailsLabel: UILabel = {
         let label = UILabel()
         label.text = "Ficha técnica"
         label.textAlignment = .justified
@@ -61,7 +61,7 @@ class MovieDetailView: UIView {
         return label
     }()
 
-    lazy var technicalDetailsLabel: UILabel = {
+    private(set) lazy var technicalDetailsLabel: UILabel = {
         let label = UILabel()
         label.text = """
         Título Original: \(movie.title)
@@ -77,7 +77,7 @@ class MovieDetailView: UIView {
         return label
     }()
 
-    lazy var favoriteButton: UIButton = {
+    private(set) lazy var favoriteButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle(isFavorite ? "Remover dos Favoritos" : "Adicionar aos Favoritos", for: .normal)
         button.backgroundColor = isFavorite ? .systemRed : .systemGreen
@@ -87,7 +87,7 @@ class MovieDetailView: UIView {
         return button
     }()
 
-    lazy var closeButton: UIButton = {
+    private(set) lazy var closeButton: UIButton = {
         let button = UIButton(type: .system)
         button.setTitle("X", for: .normal)
         button.setTitleColor(.black, for: .normal)
