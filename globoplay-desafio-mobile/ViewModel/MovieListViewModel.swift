@@ -16,10 +16,6 @@ class MovieListViewModel {
     var onMoviesUpdated: (() -> Void)?
     private var isSearchActive = false
 
-    init() {
-        fetchMovies()
-    }
-
     func fetchMovies() {
         NetworkService.shared.fetchMovies(page: currentPage) { [weak self] result in
             switch result {

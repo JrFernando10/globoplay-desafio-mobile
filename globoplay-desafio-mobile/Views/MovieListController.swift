@@ -14,14 +14,13 @@ private enum Constants {
     static let itemsPerRow: CGFloat = 2
 }
 
-import UIKit
-
 final class MovieListController: UIViewController, MyListControllerDelegate, UISearchResultsUpdating, MovieDetailControllerDelegate {
     private let viewModel = MovieListViewModel()
     private let searchController = UISearchController(searchResultsController: nil)
     private var myListController = MyListController()
     private var favoriteMovieIds: Set<Int> = []
     private let refreshControl = UIRefreshControl()
+    private let activityIndicator = UIActivityIndicatorView(style: .large)
 
     private lazy var collectionView: UICollectionView = {
         let layout = createCollectionViewLayout()
@@ -42,6 +41,8 @@ final class MovieListController: UIViewController, MyListControllerDelegate, UIS
         setupSearchController()
         setupRefreshControl()
         myListController.loadFavoriteMovies()
+        showLoading()
+        simulateInitialLoad()
     }
     
     override func viewWillAppear(_ animated: Bool) {
@@ -53,13 +54,20 @@ final class MovieListController: UIViewController, MyListControllerDelegate, UIS
         view.backgroundColor = .white
         title = "Filmes"
 
+        activityIndicator.translatesAutoresizingMaskIntoConstraints = false
+        activityIndicator.color = .gray
+
         view.addSubview(collectionView)
+        view.addSubview(activityIndicator)
 
         NSLayoutConstraint.activate([
             collectionView.topAnchor.constraint(equalTo: view.topAnchor),
             collectionView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
             collectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
-            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor)
+            collectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            
+            activityIndicator.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            activityIndicator.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
 
         navigationItem.rightBarButtonItem = UIBarButtonItem(title: "Minha Lista", style: .plain, target: self, action: #selector(openMyList))
@@ -68,6 +76,22 @@ final class MovieListController: UIViewController, MyListControllerDelegate, UIS
     private func setupRefreshControl() {
         refreshControl.addTarget(self, action: #selector(refreshMovies), for: .valueChanged)
         collectionView.refreshControl = refreshControl
+    }
+
+    private func showLoading() {
+        activityIndicator.startAnimating()
+        activityIndicator.isHidden = false
+    }
+
+    private func hideLoading() {
+        activityIndicator.stopAnimating()
+        activityIndicator.isHidden = true
+    }
+
+    private func simulateInitialLoad() {
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+            self?.viewModel.fetchMovies()
+        }
     }
 
     @objc private func refreshMovies() {
@@ -107,8 +131,8 @@ final class MovieListController: UIViewController, MyListControllerDelegate, UIS
     private func setupViewModel() {
         viewModel.onMoviesUpdated = { [weak self] in
             self?.collectionView.reloadData()
+            self?.hideLoading()
         }
-        viewModel.fetchMovies()
     }
 
     func didUpdateFavorites() {
