@@ -1,11 +1,12 @@
 //
-//  NetworkService.swift
+//  APIClient.swift
 //  globoplay-desafio-mobile
 //
-//  Created by Fernando on 24/01/25.
+//  Created by Fernando on 26/01/25.
 //
 
 import Foundation
+import UIKit
 
 enum NetworkError: Error {
     case invalidURL
@@ -20,19 +21,21 @@ struct APIConstants {
     static let imageBaseURL = "https://image.tmdb.org/t/p/w500"
 }
 
-class NetworkService {
-    static let shared = NetworkService()
+class APIClient {
+    static let shared = APIClient()
 
     private init() {}
 
-    func fetchMovies(page: Int, completion: @escaping (Result<MovieResponse, Error>) -> Void) {
-        let urlString = "\(APIConstants.baseURL)/movie/popular"
+    func request(urlString: String, parameters: [String: String]?, completion: @escaping (Result<Data, Error>) -> Void) {
         var components = URLComponents(string: urlString)
-        components?.queryItems = [
-            URLQueryItem(name: "api_key", value: APIConstants.apiKey),
-            URLQueryItem(name: "page", value: "\(page)")
-        ]
-
+        var queryItems = [URLQueryItem(name: "api_key", value: APIConstants.apiKey)]
+        if let parameters = parameters {
+            for (key, value) in parameters {
+                queryItems.append(URLQueryItem(name: key, value: value))
+            }
+        }
+        components?.queryItems = queryItems
+        
         guard let url = components?.url else {
             completion(.failure(NetworkError.invalidURL))
             return
@@ -54,15 +57,26 @@ class NetworkService {
                 return
             }
 
-            do {
-                let decoder = JSONDecoder()
-                let movieResponse = try decoder.decode(MovieResponse.self, from: data)
-                completion(.success(movieResponse))
-            } catch {
-                completion(.failure(NetworkError.decodingError))
-            }
+            completion(.success(data))
         }
 
         task.resume()
+    }
+    
+    func loadImage(urlString: String, completion: @escaping (UIImage?) -> Void) {
+        guard let url = URL(string: urlString) else {
+            completion(nil)
+            return
+        }
+        URLSession.shared.dataTask(with: url) { data, response, error in
+            guard let data = data, error == nil else {
+                completion(nil)
+                return
+            }
+            let image = UIImage(data: data)
+            DispatchQueue.main.async {
+                completion(image)
+            }
+        }.resume()
     }
 }

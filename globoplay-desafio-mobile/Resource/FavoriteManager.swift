@@ -42,7 +42,7 @@ class FavoriteManager {
         let encoder = JSONEncoder()
         if let encoded = try? encoder.encode(movies) {
             UserDefaults.standard.set(encoded, forKey: userDefaultsKey)
-            UserDefaults.standard.synchronize()  // Força gravação imediata
+            UserDefaults.standard.synchronize()
         }
     }
 }

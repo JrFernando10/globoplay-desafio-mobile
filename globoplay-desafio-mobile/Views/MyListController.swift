@@ -48,7 +48,6 @@ class MyListController: UIViewController {
     }
     
     private func setupUI() {
-        view.backgroundColor = .white
         title = "Minha Lista"
 
         tableView.delegate = self
@@ -101,6 +100,7 @@ class MyListController: UIViewController {
     func removeFavoriteMovie(_ movie: Movie) {
         guard let index = favoriteMovies.firstIndex(where: { $0.id == movie.id }) else { return }
         favoriteMovies.remove(at: index)
+        FavoriteManager.shared.removeFavoriteMovie(movie)
         updateUI()
         delegate?.didUpdateFavorites()
     }
@@ -120,12 +120,9 @@ extension MyListController: UITableViewDataSource, UITableViewDelegate {
         
         viewModel.loadImage(for: movie) { image in
             DispatchQueue.main.async {
+                cell.delegate = self
                 cell.configure(with: movie, isFavorite: true, image: image)
             }
-        }
-        
-        cell.onFavoriteTapped = { [weak self] in
-            self?.removeFavoriteMovie(movie)
         }
         
         return cell
@@ -152,6 +149,13 @@ extension MyListController: MovieDetailControllerDelegate {
         }
     }
 }
+
+extension MyListController: MovieFavoriteCellDelegate {
+    func didTapFavoriteButton(for movie: Movie) {
+        removeFavoriteMovie(movie)
+    }
+}
+
 
 extension Notification.Name {
     static let favoritesUpdated = Notification.Name("favoritesUpdated")

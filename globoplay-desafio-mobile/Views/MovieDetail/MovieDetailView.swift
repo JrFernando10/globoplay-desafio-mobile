@@ -46,6 +46,7 @@ class MovieDetailView: UIView {
         label.text = movie.overview
         label.numberOfLines = 0
         label.font = UIFont.systemFont(ofSize: 16)
+        label.textAlignment = .justified
         label.textColor = .darkGray
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -54,6 +55,7 @@ class MovieDetailView: UIView {
     lazy var detailsLabel: UILabel = {
         let label = UILabel()
         label.text = "Ficha técnica"
+        label.textAlignment = .justified
         label.font = UIFont.boldSystemFont(ofSize: 16)
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -69,6 +71,7 @@ class MovieDetailView: UIView {
         """
         label.numberOfLines = 0
         label.font = UIFont.systemFont(ofSize: 16)
+        label.textAlignment = .justified
         label.textColor = .darkGray
         label.translatesAutoresizingMaskIntoConstraints = false
         return label
@@ -136,7 +139,7 @@ class MovieDetailView: UIView {
             posterImageView.topAnchor.constraint(equalTo: closeButton.bottomAnchor, constant: 8),
             posterImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             posterImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            posterImageView.heightAnchor.constraint(equalToConstant: 300),
+            posterImageView.heightAnchor.constraint(equalToConstant: 400),
 
             titleLabel.topAnchor.constraint(equalTo: posterImageView.bottomAnchor, constant: 16),
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),

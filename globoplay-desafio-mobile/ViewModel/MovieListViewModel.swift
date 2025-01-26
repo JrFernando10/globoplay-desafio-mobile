@@ -50,17 +50,9 @@ class MovieListViewModel {
     }
 
     func loadImage(for movie: Movie, completion: @escaping (UIImage?) -> Void) {
-        if let posterPath = movie.poster_path, let url = URL(string: "https://image.tmdb.org/t/p/w500\(posterPath)") {
-            URLSession.shared.dataTask(with: url) { data, response, error in
-                guard let data = data, error == nil else {
-                    completion(nil)
-                    return
-                }
-                let image = UIImage(data: data)
-                DispatchQueue.main.async {
-                    completion(image)
-                }
-            }.resume()
+        if let posterPath = movie.poster_path {
+            let urlString = "\(APIConstants.imageBaseURL)\(posterPath)"
+            APIClient.shared.loadImage(urlString: urlString, completion: completion)
         } else {
             completion(nil)
         }

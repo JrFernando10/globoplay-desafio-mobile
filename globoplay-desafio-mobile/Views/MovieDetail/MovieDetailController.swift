@@ -58,7 +58,6 @@ class MovieDetailController: UIViewController {
         updateFavoriteButton()
         
         NotificationCenter.default.post(name: .favoritesUpdated, object: nil) 
-        dismiss(animated: true)
         delegate?.didUpdateFavorites()
     }
 

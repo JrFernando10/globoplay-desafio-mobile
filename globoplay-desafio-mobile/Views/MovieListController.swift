@@ -8,7 +8,7 @@
 import UIKit
 
 private enum Constants {
-    static let itemHeight: CGFloat = 150
+    static let itemHeight: CGFloat = 250
     static let itemSpacing: CGFloat = 10
     static let sectionInsets = UIEdgeInsets(top: 10, left: 10, bottom: 10, right: 10)
     static let itemsPerRow: CGFloat = 2
